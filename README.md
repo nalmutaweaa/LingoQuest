@@ -1,88 +1,181 @@
 # LingoQuest
 
-A language-learning game where kids (4–12) explore Japanese, French and Spanish by learning, hunting real objects, speaking, and scanning cards, and earn passport stamps.
+**A language-learning game where kids explore Japanese, French and Spanish by learning words, hunting real objects, speaking, and scanning cards, then collecting passport stamps.**
+
+
+---
 
 ## Problem Statement & Motivation
-- Most language apps focus on memorization and ignore how kids actually learn: by moving, playing and exploring.
-- Many children grow up in multilingual homes and are curious about the words around them.
-- Gen Alpha kids pick up languages fast, and early exposure helps ([cite the paper from your presentation]).
-- LingoQuest connects words to the child's real surroundings (home, school, outdoor) through a camera, voice and a travel adventure.
 
-## How It Works
-Pick a guide → pick a language → pick an adventure (Home / School / Outdoor) → choose a mode:
-| Mode | What the kid does |
-|---|---|
-| Learn | See the picture and word, listen to it |
-| Cards | Show a printed LingoQuest card to the camera |
-| Hunt | Find the real object at home and show it to the camera |
-| Speak | Say the word into the microphone |
+Young children acquire new languages most easily early in life, yet most language-learning apps are built around screen-based flashcards with little feedback on what a child actually sees or says. Families raising children with more than one language lack a playful, hands-on way to practice vocabulary that checks the child's answer in the real world.
 
-Each round ends with a bronze, silver or gold stamp in the passport.
+This project asks whether **computer vision** and **speech recognition** can turn everyday objects and spoken words into a **game that checks itself**.
 
-## Dataset
-**Card images (YOLO):** [N] photos of 12 printed cards, taken in [different places/lighting]. Labeled in Roboflow, split [train/valid/test numbers]. Source: our own photos. [Roboflow link]
+**Meet Ahmed.** He is 6 years old. He hears French from his mom, Japanese from his aunt, and Filipino from his nanny. He is curious about cultures, and he learns by playing, not by sitting with flashcards.
 
-**Vocabulary file (`vocab_final.csv`):** one row per word. Columns: category (Home / School / Outdoor), English, translations (Japanese with kanji, hiragana, romaji; French; Spanish), accepted answers, audio file path, picture name, and the YOLO class for card words.
+- **Early years matter:** research suggests children pick up new languages more easily when they start young. The earlier they practice, the more natural it feels.
+- **Live in the moment:** children learn best by looking, touching and moving. A real object in their hand makes a new word easy to remember.
 
-## Models & Tools
-| Tool | Where from | Purpose |
+## How the Game Works
+
+1. **Clone your voice:** the kid records a short text, and the guide speaks in a cloned voice (or a default voice if skipped).
+2. **Pick a language and an adventure:** Japanese, French or Spanish, then Home, School or Outdoor.
+3. **Pick a mode:**
+
+| Mode | What the kid does | AI used |
 |---|---|---|
-| YOLO26s | Ultralytics, trained on our Roboflow dataset | Detects the 12 printed cards |
-| Nemotron vision model (`nvidia/nemotron-3.5-super-vl:free`) | OpenRouter | Hunt: checks whether the object is in the camera photo |
-| Whisper (faster-whisper, "small") | OpenAI Whisper, run locally | Speak: turns the kid's voice into text |
-| HeyGen | HeyGen API | Clones the guide's voice |
-| edge-tts | Microsoft Edge TTS | Generates the word audio |
-| pygame / OpenCV | Open source | The game and the camera |
+| Learn | Sees the word and picture, listens to the pronunciation | Edge TTS audio |
+| Cards | Shows a printed LingoQuest card to the camera | YOLO26s |
+| Hunt | Finds the real object at home and shows it to the camera | Vision-language model API |
+| Speak | Says the word into the microphone | Whisper |
 
-**Training pipeline:** photos → Roboflow labeling and augmentation → YOLO26s training → `best.pt` → used in the game with confidence 0.3.
-[Add epochs, image size, and the training environment.]
+4. **Collect stamps:** a good score earns a bronze, silver or gold passport stamp for that country and mode.
+
+## Dataset & Data Collection
+
+**1. Custom image dataset (Cards)**
+- 12 everyday object classes, printed as cards
+- 1,224 training images and 153 validation images
+- Personally collected photos, labeled using Roboflow
+
+**2. Vocabulary dataset (`vocab_final.csv`)**
+- Japanese, French and Spanish
+- Three adventures (Home, School, Outdoor) with 10 words each
+- Words, translations and pronunciation (Japanese kanji, hiragana and romaji)
+- Multiple accepted word variations for speech matching
+- Image and audio file paths, and the YOLO class for the card words
+
+**3. Voice data**
+- A default voice sample
+- The kid's recording, used for personalized voice generation
+- Speech input for vocabulary recognition
+
+## AI Models & Services
+
+| Component | Model / Service | Purpose |
+|---|---|---|
+| Object Detection | YOLO26s (Ultralytics) | Recognizes the printed vocabulary cards |
+| Image Understanding | NVIDIA Nemotron 3.5 Super VL, through the OpenRouter API | Checks real objects through camera images (Hunt) |
+| Speech Recognition | OpenAI Whisper (`whisper-large-v3`), through the OpenRouter API (paid, pay-per-use). The earlier version used local Faster-Whisper | Recognizes spoken vocabulary (Speak) |
+| Voice Cloning | HeyGen API | Personalizes the game guide's voice |
+| Text-to-Speech | Edge TTS | Pronounces the vocabulary words |
+| Game and camera | pygame, OpenCV | Game screens, webcam |
+
+### Training Pipeline (Cards)
+Personally collected photos of the 12 printed cards, taken in different places → labeled in Roboflow → split into 1,224 training and 153 validation images → YOLO26s trained with Ultralytics → `best.pt` → loaded in the game to detect the card shown to the webcam.
 
 ## Evaluation
-**YOLO (cards):** recall 97%, precision [x], mAP50 [x], on [test set]. Baseline: [e.g. the pretrained COCO model could not detect the cards or the real objects, which is why we trained our own]. 
 
-**Speech and Hunt (manual testing):** we tested each language by hand, with the speaker saying each word in a medium-quiet room.
-- Speak: [about 7 of 10 words accepted on the first try; longer words often needed a repeat]
-- Hunt: [lenient, accepted a glass as a cup and a tissue as a towel]
+### Cards: Object Detection (YOLO26s)
 
-[Add your small results table or graph from the presentation.]
+| Metric | Result |
+|---|---|
+| mAP50 | **97.3%** |
+| Recall | **97.7%** |
+
+The confusion matrix shows that almost every card is detected as the right class; the few mistakes mostly involve the background class. (Add `images/confusion_matrix.png` here.)
+
+**Baseline comparison:** our first approach was fine-tuning YOLO on a Roboflow real-object dataset of about 13,000 images. It gave poor accuracy, precision and recall. That is why the project now uses two approaches: YOLO trained on printed cards, where we control the data and the results are reliable, and a vision-language model for real objects, which needs no training.
+
+### Hunt: Real Object Recognition (Nemotron API)
+Manual test: we showed each word to the camera with the object really there ("y") and not there ("n"), and compared the API's answer.
+
+| Word | Really there | API answer | Seconds |
+|---|---|---|---|
+| cup | y | yes | 2.1 |
+| cup | n | no | 1.5 |
+| spoon | y | yes | 1.7 |
+| spoon | n | no | 1.7 |
+| pillow | y | yes | 1.6 |
+| pillow | n | no | 1.6 |
+| chair | y | yes | 11.9 |
+| chair | n | no | 1.9 |
+| toothbrush | y | yes | 1.9 |
+| toothbrush | y | yes | 1.6 |
+| toothbrush | n | no | 1.6 |
+| clock | y | **no** (missed) | 1.8 |
+
+- **11 of 12 answers were correct.** The one miss was a real clock that the API said was not there.
+- Most answers came back in about 1.5–2 seconds; one took 11.9 seconds (internet speed).
+- The API is lenient: it accepted a glass as a cup and a tissue as a towel.
+
+### Speak: Speech Recognition (Whisper)
+Manual test: we tested the words in all three languages (Japanese, French and Spanish), speaking each word ourselves in a medium-quiet room, and compared two options.
+
+| | Local Faster-Whisper (small) | Whisper API (OpenRouter) |
+|---|---|---|
+| Accuracy | about 7 out of 10 words | about 7 out of 10 words on the first try, in all three languages |
+| Speed | about 15 seconds per word | 2–6 seconds, depending on the internet |
+| Internet needed | No | Yes (otherwise the game says "Try again") |
+
+- Longer words (for example the Spanish word for toothbrush) often needed a repeat, but when the word was heard the answer was accurate.
+- Because the local model was slow, we moved speech recognition to the Whisper API.
 
 ## How to Run
-Requirements: Python [version], a webcam, a microphone, an internet connection.
-1. Clone the repo: `git clone [repo link]`
-2. (Optional) Create a virtual environment: `python -m venv venv` then activate it.
-3. Install the libraries: `pip install -r requirements.txt`
-4. Copy `.env.example` to `.env` and add your own keys:
+
+**You need:** Python, a webcam, a microphone, and an internet connection.
+
+1. Download or clone this repository, then open a terminal in the project folder.
+2. (Optional) Create a virtual environment:
+   ```
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+3. Install the libraries:
+   ```
+   pip install -r requirements.txt
+   ```
+4. Create your keys file. Copy `.env.example` to a new file named `.env` and fill in your own keys:
    ```
    OPENROUTER_KEY=your key
    HEYGEN_KEY=your key
    ```
-5. Keep `app.py`, `best.pt`, `vocab_final.csv`, `images/` and `audio/` in the same folder.
-6. Run: `python app.py`
+5. Make sure `app.py`, `best.pt`, `vocab_final.csv`, `images/` and `audio/` are in the same folder.
+6. Start the game:
+   ```
+   python app.py
+   ```
 
 ## Repo Structure
+
 ```
 Prototype/
-├── app.py              # the game
-├── best.pt             # trained YOLO26s card model
-├── vocab_final.csv     # vocabulary for all languages
-├── requirements.txt
-├── .env.example        # names of the keys needed
-├── .gitignore
-├── images/             # backgrounds, guide, passport, stamps, vocab pictures
+├── app.py              # the game (pygame main loop, modes, API calls)
+├── best.pt             # trained YOLO26s card detector
+├── vocab_final.csv     # vocabulary for Japanese, French, Spanish
+├── requirements.txt    # Python libraries
+├── .env.example        # names of the API keys you need to add in .env
+├── .gitignore          # files Git should not upload (like .env)
+├── images/             # backgrounds, guide, passport, stamps, word pictures
 ├── audio/              # word audio, music, sound effects
-└── notebooks/          # training and data notebooks
+└── notebooks/          # data preparation and training notebooks
 ```
 
-## Limitations & Future Work
-- Needs an internet connection for Hunt and the voice cloning.
-- Pygame is a desktop library, so the game can't be deployed as a normal website yet. Future work: deploy it, or move it to the web.
-- Hunt can be too lenient; Speak can struggle with long words and noisy rooms.
-- The card detector knows only 12 cards.
-- Future: more languages and words, a special card stamp, more testing with real kids.
+## Limitations
+
+- **Limited dataset:** the model was trained on a limited number of images and object categories (12 cards).
+- **External dependencies:** some game features rely on external APIs and an internet connection.
+- **Limited testing:** more testing is needed with children, particularly for speech recognition across French, Spanish and Japanese.
+- The vision API can be too lenient with objects that look alike.
+- The game is built with pygame, which runs on a computer, so it can't be deployed as a normal website yet.
+
+## Future Work
+
+- **Further evaluation:** assess learning progress, engagement and gameplay experience.
+- **Content expansion:** add more vocabulary, languages and adventures.
+- **Enhanced interaction:** introduce more dialogues and interactive activities (for example, introductions about countries and cultures).
+- **Progress tracking:** add player profiles and achievement records.
+- **Offline capabilities:** explore locally running AI models.
+- **Wider accessibility:** develop mobile and web versions.
 
 ## Screenshots
-[Add your screenshots or GIFs here.]
 
-## License & Acknowledgments
-License: MIT [or whichever your instructor prefers].
-Thanks to Ultralytics (YOLO), Roboflow, OpenAI Whisper and faster-whisper, OpenRouter, HeyGen, edge-tts, pygame, [General Assembly and your instructor's name].
+<!-- Add screenshots or a demo link here -->
+
+## License
+
+MIT License. You may use and change this code if you give credit.
+
+## Acknowledgments
+
+General Assembly and our instructors; Ultralytics (YOLO); Roboflow; OpenAI Whisper and Faster-Whisper; OpenRouter; NVIDIA Nemotron; HeyGen; Edge TTS; pygame and OpenCV. The pixel-art game images were created with AI image tools.
