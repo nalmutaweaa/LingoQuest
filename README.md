@@ -71,41 +71,6 @@ Training settings: image size 512, SGD optimizer, learning rate 0.001, up to 40 
 
 **Real objects and speech** use pre-trained models through APIs, so no training was needed for them.
 
-## Architecture
-
-The desktop version runs everything on the child's computer. The web version cannot run the heavy models inside the browser, so a small server on Render does that work. The API keys live only on the server, never in the browser.
-
-```mermaid
-flowchart LR
-    B["Web browser<br/>LingoQuest game<br/>(pygbag, GitHub Pages)"]
-
-    subgraph R["Render server (FastAPI)"]
-        K["API keys<br/>(environment variables)"]
-        Y["YOLO card model<br/>(small ONNX version)"]
-    end
-
-    O["OpenRouter API"]
-    V["Nemotron vision model"]
-    W["Whisper speech model"]
-
-    B -- "/card : card photo" --> Y
-    B -- "/hunt : object photo" --> R
-    B -- "/speak : voice recording" --> R
-    Y -- "found card" --> B
-    R -- "uses key" --> K
-    K --> O
-    O --> V
-    O --> W
-    V -- "yes / no" --> R
-    W -- "heard word" --> R
-    R -- "result" --> B
-```
-
-**What each part does**
-- **Web browser:** shows the game, takes the camera picture and the voice recording, and sends them to the server.
-- **Render server:** receives the request, runs the card model itself (`/card`), or calls OpenRouter with the secret key for the vision (`/hunt`) and speech (`/speak`) models, then sends a simple answer back to the game.
-- **YOLO on the server:** the trained PyTorch model is too large for the free Render plan (512 MB of memory), so it was exported to ONNX, which is about 19 MB and runs fast on a normal CPU.
-- **OpenRouter:** one API that gives access to the vision and speech models.
 
 ## Evaluation & Baseline Comparison
 
@@ -220,6 +185,11 @@ The desktop version runs everything on the child's computer. The web version can
 
 <img width="2800" height="1260" alt="architecture" src="https://github.com/user-attachments/assets/37e4f7ce-7775-4eeb-86b2-42991ab18979" />
 
+**What each part does**
+- **Web browser:** shows the game, takes the camera picture and the voice recording, and sends them to the server.
+- **Render server:** receives the request, runs the card model itself (`/card`), or calls OpenRouter with the secret key for the vision (`/hunt`) and speech (`/speak`) models, then sends a simple answer back to the game.
+- **YOLO on the server:** the trained PyTorch model is too large for the free Render plan (512 MB of memory), so it was exported to ONNX, which is about 19 MB and runs fast on a normal CPU.
+- **OpenRouter:** one API that gives access to the vision and speech models.
 
 ## Limitations
 
