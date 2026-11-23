@@ -81,9 +81,11 @@ Training settings: image size 512, SGD optimizer, learning rate 0.001, up to 40 
 | mAP50 | **85.3%** | **81.3%** |
 
 *Confusion matrix:* 
+
 <img width="3000" height="2250" alt="image" src="https://github.com/user-attachments/assets/22823dd5-1cd1-4804-a773-785a1649b0f5" />
 
 *Training results:* 
+
 <img width="250" height="254" alt="image" src="https://github.com/user-attachments/assets/a1484a53-f5c1-4e62-bf8f-4798d4601856" />
 
 
@@ -128,7 +130,7 @@ Additional cases we tried on purpose, to see how strict the model is:
 
 Manual test: we tested the words in all three languages (Japanese, French and Spanish), speaking each word ourselves in a medium-quiet room.
 
-| | Baseline: local Faster-Whisper | Whisper API (OpenRouter) |
+| | Baseline: local Faster-Whisper small | Whisper API (OpenRouter) larg |
 |---|---|---|
 | Accuracy | about 7 out of 10 words | about 7 out of 10 words on the first try, in all three languages |
 | Response time | about 15–20 seconds per word | 2–6 seconds, depending on the internet |
