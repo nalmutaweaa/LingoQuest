@@ -5,3 +5,4 @@ speech.wav
 passport_city.json
 *_log.csv
 audio/voice/kid/
+.env
