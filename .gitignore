@@ -1,6 +1,7 @@
 .env
 __pycache__/
-.ipynb_checkpoints/
 my_voice.wav
 speech.wav
-passport.json
+passport_city.json
+*_log.csv
+audio/voice/kid/
