@@ -1,4 +1,4 @@
-pygame==2.6.1
+pygame
 opencv-python
 pandas
 numpy
